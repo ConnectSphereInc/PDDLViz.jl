@@ -46,6 +46,16 @@ $(TYPEDFIELDS)
     inventory_labels::Vector{String} = String[]
     "Inventory label font size."
     inventory_labelsize::Real = 20
+    "Whether to show an object vision for each function in `vision_fns`."
+    show_vision::Bool = false
+    "Vision indicator functions of the form `(domain, state, obj) -> Bool`."
+    vision_fns::Vector{Function} = Function[]
+    "Types of objects that can be each vision."
+    vision_types::Vector{Symbol} = Symbol[]
+    "Vision labels for each vision indicator."
+    vision_labels::Vector{String} = String[]
+    "Vision label font size."
+    vision_labelsize::Real = 20
     "Default options for state rendering."
     state_options::Dict{Symbol, Any} =
         default_state_options(GridworldRenderer)
