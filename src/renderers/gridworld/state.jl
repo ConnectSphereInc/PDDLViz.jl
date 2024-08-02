@@ -10,7 +10,7 @@ function render_state!(
         canvas.state = state
     end
     # Extract or construct main axis
-    ax = get(canvas.blocks, 1) do 
+    ax = get(canvas.blocks, 1) do
         _ax = Axis(canvas.layout[1,1], aspect=DataAspect(),
                    xzoomlock=true, xpanlock=true, xrectzoom=false,
                    yzoomlock=true, ypanlock=true, yrectzoom=false,
@@ -36,7 +36,7 @@ function render_state!(
     end
     # Set ticks to show grid
     map!(w -> (1:w-1) .+ 0.5, ax.xticks, width)
-    map!(h -> (1:h-1) .+ 0.5, ax.yticks, height) 
+    map!(h -> (1:h-1) .+ 0.5, ax.yticks, height)
     xlims!(ax, 0.5, width[] + 0.5)
     ylims!(ax, 0.5, height[] + 0.5)
     # Render locations
@@ -217,6 +217,32 @@ function render_state!(
         # Store observable for caption in canvas
         canvas.observables[:caption] = _ax.xlabel
     end
+
+    # Render agent vision
+    if renderer.has_agent && get(options, :show_agent, true)
+        graphic = @lift begin
+            x, y = gw_agent_loc(renderer, $state, $height)
+
+            # Define the range for highlighting
+            x_range = max(x - 1, 1):min(x + 1, width[])
+            y_range = max(y - 1, 1):min(y + 1, height[])
+
+            # Add highlighting to the 3x3 area around the agent
+            for xx in x_range, yy in y_range
+                if !state.walls[xx, yy]
+                    rect = Rect(xx - 0.5, yy - 0.5, 1, 1)
+                    poly!(ax, rect, color=:black, strokewidth=0, tag=:highlights)
+                end
+                rect = Rect(xx - 0.5, yy - 0.5, 1, 1)
+                poly!(ax, rect, color=RGBA(1.0, 0.0, 0.0, 0.1), strokewidth=0)
+            end
+
+            translate(renderer.agent_renderer(domain, $state), x, y)
+        end
+        plt = graphicplot!(ax, graphic)
+        canvas.plots[:agent_graphic] = plt
+    end
+
     # Return the canvas
     return canvas
 end
