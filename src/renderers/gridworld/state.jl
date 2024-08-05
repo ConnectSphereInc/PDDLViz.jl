@@ -229,12 +229,11 @@ function render_state!(
 
             # Add highlighting to the 3x3 area around the agent
             for xx in x_range, yy in y_range
-                if !state.walls[xx, yy]
+                if !((state.val).walls[11 - yy, xx])    # Note: Different orientation from that of the rendering
+                    println(xx, yy)
                     rect = Rect(xx - 0.5, yy - 0.5, 1, 1)
-                    poly!(ax, rect, color=:black, strokewidth=0, tag=:highlights)
+                    poly!(ax, rect, color=RGBA(1.0, 0.0, 0.0, 0.1), strokewidth=0)
                 end
-                rect = Rect(xx - 0.5, yy - 0.5, 1, 1)
-                poly!(ax, rect, color=RGBA(1.0, 0.0, 0.0, 0.1), strokewidth=0)
             end
 
             translate(renderer.agent_renderer(domain, $state), x, y)
