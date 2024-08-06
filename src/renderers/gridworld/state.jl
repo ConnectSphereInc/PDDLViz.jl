@@ -1,3 +1,5 @@
+prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
+
 function render_state!(
     canvas::Canvas, renderer::GridworldRenderer,
     domain::Domain, state::Observable;
@@ -223,17 +225,35 @@ function render_state!(
         graphic = @lift begin
             x, y = gw_agent_loc(renderer, $state, $height)
 
-            # Define the range for highlighting
-            x_range = max(x - 1, 1):min(x + 1, width[])
-            y_range = max(y - 1, 1):min(y + 1, height[])
+            # Initialize previous location if not exist
+            if prev_agent_loc[:x] === nothing || prev_agent_loc[:y] === nothing
+                prev_agent_loc[:x], prev_agent_loc[:y] = x, y
+            end
 
-            # Add highlighting to the 3x3 area around the agent
-            for xx in x_range, yy in y_range
-                if !((state.val).walls[11 - yy, xx])    # Note: Different orientation from that of the rendering
-                    println(xx, yy)
-                    rect = Rect(xx - 0.5, yy - 0.5, 1, 1)
+            # Calculate the direction of movement
+            dx, dy = x - prev_agent_loc[:x], y - prev_agent_loc[:y]
+
+            offset = []
+            if dx > 0  # Moving right
+                offset = [(0, 0), (1, 0), (2, 0), (1, 1), (2, 1), (2, 2), (1, -1), (2, -1), (2, -2)]
+            elseif dx < 0  # Moving left
+                offset = [(0, 0), (-1, 0), (-2, 0), (-1, 1), (-2, 1), (-2, 2), (-1, -1), (-2, -1), (-2, -2)]
+            elseif dy > 0  # Moving up
+                offset = [(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2), (-1, 1), (-1, 2), (-2, 2)]
+            elseif dy < 0  # Moving down
+                offset = [(0, 0), (0, -1), (0, -2), (1, -1), (1, -2), (2, -2), (-1, -1), (-1, -2), (-2, -2)]
+            end
+
+            # Add highlighting to the visible area
+            for (xx, yy) in offset
+                if is_valid_loc(x + xx, y + yy, width, height) && !is_blocked(state.val.walls, x, y, xx, yy)
+                    rect = Rect(x + xx - 0.5, y + yy - 0.5, 1, 1)
                     poly!(ax, rect, color=RGBA(1.0, 0.0, 0.0, 0.1), strokewidth=0)
                 end
+            end
+
+            if (x != prev_agent_loc[:x]) || (y != prev_agent_loc[:y])
+                prev_agent_loc[:x], prev_agent_loc[:y] = x, y
             end
 
             translate(renderer.agent_renderer(domain, $state), x, y)
@@ -274,3 +294,19 @@ default_state_options(R::Type{GridworldRenderer}) = Dict{Symbol,Any}(
     :caption_padding => 12,
     :caption_rotation => 0
 )
+
+# Check if the location is blocked by walls
+function is_blocked(walls, x, y, xx, yy)
+    if walls[11 - (y + yy), x + xx]     # Note: Different orientation from that of the rendering
+        return true
+    end
+    return false
+end
+
+# Check if the location is within the grid
+function is_valid_loc(x, y, width, height)
+    if (x >= 1) && (x <= width[]) && (y >= 1) && (y <= height[])
+        return true
+    end
+    return false
+end
