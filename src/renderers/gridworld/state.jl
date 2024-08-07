@@ -198,7 +198,7 @@ function render_state!(
             end
             # Resize row
             row_height = 1/height[] * width[]/vision_size[]
-            rowsize!(canvas.layout, length(renderer.inventory_fns) + i + 1, Auto(row_height))
+            rowsize!(canvas.layout, length(renderer.vision_fns) + i + 1, Auto(row_height))
         end
         rowgap!(canvas.layout, 10)
         resize_to_layout!(canvas.figure)
