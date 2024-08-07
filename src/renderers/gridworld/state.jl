@@ -148,9 +148,9 @@ function render_state!(
             ty = get(renderer.vision_types, i, :object)
             sorted_objs = sort(PDDL.get_objects(domain, state[], ty), by=string)
             # Extract or construct axis for each vision bar
-            ax_i = get(canvas.blocks, length(renderer.inventory_fns) + i + 1) do
+            ax_i = get(canvas.blocks, length(renderer.vision_fns) + i + 1) do
                 title = get(renderer.vision_labels, i, "Vision")
-                _ax = Axis(canvas.layout[length(renderer.inventory_fns) + i + 1, 1], aspect=DataAspect(),
+                _ax = Axis(canvas.layout[length(renderer.vision_fns) + i + 1, 1], aspect=DataAspect(),
                            title=title, titlealign=:left,
                            titlefont=:regular, titlesize=vision_labelsize,
                            xzoomlock=true, xpanlock=true, xrectzoom=false,
