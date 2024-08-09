@@ -327,6 +327,13 @@ function is_path_blocked(agent_x, agent_y, target_x, target_y, walls)
     while x != target_x || y != target_y
 
         e2 = 2 * err
+
+        if e2 >= dy && e2 <= dx
+            if is_wall(walls, x + sx, y) && is_wall(walls, x, y + sy)
+                return true
+            end
+        end
+
         if e2 >= dy
             if x == target_x
                 break
