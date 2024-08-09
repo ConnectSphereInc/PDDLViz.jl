@@ -244,10 +244,13 @@ function render_state!(
                 offset = [(0, 0), (0, -1), (0, -2), (1, -1), (1, -2), (2, -2), (-1, -1), (-1, -2), (-2, -2)]
             end
 
+            walls = state.val.walls
+
             # Add highlighting to the visible area
             for (xx, yy) in offset
-                if is_valid_loc(x + xx, y + yy, width, height) && !is_blocked(state.val.walls, x, y, xx, yy)
-                    rect = Rect(x + xx - 0.5, y + yy - 0.5, 1, 1)
+                target_x, target_y = x + xx, y + yy
+                if is_valid_loc(target_x, target_y, width, height) && !is_path_blocked(x, y, target_x, target_y, walls)
+                    rect = Rect(target_x - 0.5, target_y - 0.5, 1, 1)
                     poly!(ax, rect, color=RGBA(1.0, 0.0, 0.0, 0.1), strokewidth=0)
                 end
             end
@@ -295,12 +298,8 @@ default_state_options(R::Type{GridworldRenderer}) = Dict{Symbol,Any}(
     :caption_rotation => 0
 )
 
-# Check if the location is blocked by walls
-function is_blocked(walls, x, y, xx, yy)
-    if walls[11 - (y + yy), x + xx]     # Note: Different orientation from that of the rendering
-        return true
-    end
-    return false
+function is_wall(walls, x, y)
+    return walls[11 - y, x]
 end
 
 # Check if the location is within the grid
@@ -308,5 +307,45 @@ function is_valid_loc(x, y, width, height)
     if (x >= 1) && (x <= width[]) && (y >= 1) && (y <= height[])
         return true
     end
+    return false
+end
+
+
+# Check if there is a wall between the agent and the target
+# Bresenham's line algorithm
+function is_path_blocked(agent_x, agent_y, target_x, target_y, walls)
+    dx = abs(target_x - agent_x)
+    dy = -abs(target_y - agent_y)
+    sx = agent_x < target_x ? 1 : -1
+    sy = agent_y < target_y ? 1 : -1
+    err = dx + dy
+
+    x = agent_x
+    y = agent_y
+
+    # While the destination has not been reached
+    while x != target_x || y != target_y
+
+        e2 = 2 * err
+        if e2 >= dy
+            if x == target_x
+                break
+            end
+            err += dy
+            x += sx
+        end
+        if e2 <= dx
+            if y == target_y
+                break
+            end
+            err += dx
+            y += sy
+        end
+
+        if is_wall(walls, x, y)
+            return true
+        end
+    end
+
     return false
 end
