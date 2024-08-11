@@ -220,35 +220,24 @@ function render_state!(
 
     # Render agent vision
     if renderer.has_agent && get(options, :show_agent, true)
-
+        # Initialize agent location and offset
         prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
         prev_offset = [(0, 0); fill((Inf, Inf), 8)]
 
         graphic = @lift begin
             x, y = gw_agent_loc(renderer, $state, $height)
 
-            # Initialize previous location if not exist
-            if prev_agent_loc[:x] === nothing || prev_agent_loc[:y] === nothing
+            # Set initial previous location
+            if isnothing(prev_agent_loc[:x]) || isnothing(prev_agent_loc[:y])
                 prev_agent_loc[:x], prev_agent_loc[:y] = x, y
             end
 
-            # Calculate the direction of movement
+            # Determine movement direction and set vision offset
             dx, dy = x - prev_agent_loc[:x], y - prev_agent_loc[:y]
 
-            if dx > 0  # Moving right
-                offset = [(0, 0), (1, 0), (2, 0), (1, 1), (2, 1), (2, 2), (1, -1), (2, -1), (2, -2)]
-            elseif dx < 0  # Moving left
-                offset = [(0, 0), (-1, 0), (-2, 0), (-1, 1), (-2, 1), (-2, 2), (-1, -1), (-2, -1), (-2, -2)]
-            elseif dy > 0  # Moving up
-                offset = [(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2), (-1, 1), (-1, 2), (-2, 2)]
-            elseif dy < 0  # Moving down
-                offset = [(0, 0), (0, -1), (0, -2), (1, -1), (1, -2), (2, -2), (-1, -1), (-1, -2), (-2, -2)]
-            else
-                offset = prev_offset
-            end
+            offset = calculate_vision_offset(dx, dy, prev_offset)
 
             walls = state.val.walls
-
             rect_shapes = []
 
             # Add highlighting to the visible area
@@ -260,6 +249,7 @@ function render_state!(
                     push!(rect_shapes, RectShape(x, y, 1, 1; color=RGBA(0.0, 0.0, 0.0, 0.0), strokewidth=0))
                 end
             end
+
             # Update previous location and offset
             prev_agent_loc[:x], prev_agent_loc[:y] = x, y
             prev_offset = offset
@@ -303,62 +293,3 @@ default_state_options(R::Type{GridworldRenderer}) = Dict{Symbol,Any}(
     :caption_padding => 12,
     :caption_rotation => 0
 )
-
-function is_wall(walls, x, y)
-    return walls[11 - y, x]
-end
-
-# Check if the location is within the grid
-function is_valid_loc(x, y, width, height)
-    if (x >= 1) && (x <= width[]) && (y >= 1) && (y <= height[])
-        return true
-    end
-    return false
-end
-
-
-# Check if there is a wall between the agent and the target
-# Bresenham's line algorithm
-function is_path_blocked(agent_x, agent_y, target_x, target_y, walls)
-    dx = abs(target_x - agent_x)
-    dy = -abs(target_y - agent_y)
-    sx = agent_x < target_x ? 1 : -1
-    sy = agent_y < target_y ? 1 : -1
-    err = dx + dy
-
-    x = agent_x
-    y = agent_y
-
-    # While the destination has not been reached
-    while x != target_x || y != target_y
-
-        e2 = 2 * err
-
-        if e2 >= dy && e2 <= dx
-            if is_wall(walls, x + sx, y) && is_wall(walls, x, y + sy)
-                return true
-            end
-        end
-
-        if e2 >= dy
-            if x == target_x
-                break
-            end
-            err += dy
-            x += sx
-        end
-        if e2 <= dx
-            if y == target_y
-                break
-            end
-            err += dx
-            y += sy
-        end
-
-        if is_wall(walls, x, y)
-            return true
-        end
-    end
-
-    return false
-end

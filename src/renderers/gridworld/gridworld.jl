@@ -101,6 +101,8 @@ include("state.jl")
 include("trajectory.jl")
 include("animate.jl")
 
+include("utils.jl")
+
 # Solution rendering
 include("path_search.jl")
 include("policy.jl")
