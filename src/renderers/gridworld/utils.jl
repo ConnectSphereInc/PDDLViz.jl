@@ -21,20 +21,31 @@ function is_path_blocked(agent_x, agent_y, target_x, target_y, walls)
     sy = agent_y < target_y ? 1 : -1
     err = dx + dy
 
-    x = agent_x
-    y = agent_y
+    x, y = agent_x, agent_y
 
     # While the destination has not been reached
     while x != target_x || y != target_y
 
         e2 = 2 * err
 
+        # Check diagonal walls
         if e2 >= dy && e2 <= dx
             if is_wall(walls, x + sx, y) && is_wall(walls, x, y + sy)
                 return true
             end
+
+            if abs(x - target_x) > abs(y - target_y)
+                if is_wall(walls, x + sx, y)
+                    return true
+                end
+            else
+                if is_wall(walls, x, y + sy)
+                    return true
+                end
+            end
         end
 
+        # Update error and position
         if e2 >= dy
             if x == target_x
                 break
@@ -50,6 +61,7 @@ function is_path_blocked(agent_x, agent_y, target_x, target_y, walls)
             y += sy
         end
 
+        # Check if the current position is a wall
         if is_wall(walls, x, y)
             return true
         end
