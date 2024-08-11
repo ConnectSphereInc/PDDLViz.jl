@@ -1,5 +1,3 @@
-prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
-
 function render_state!(
     canvas::Canvas, renderer::GridworldRenderer,
     domain::Domain, state::Observable;
@@ -222,6 +220,10 @@ function render_state!(
 
     # Render agent vision
     if renderer.has_agent && get(options, :show_agent, true)
+
+        prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
+        prev_offset = [(0, 0); fill((Inf, Inf), 8)]
+
         graphic = @lift begin
             x, y = gw_agent_loc(renderer, $state, $height)
 
@@ -233,7 +235,6 @@ function render_state!(
             # Calculate the direction of movement
             dx, dy = x - prev_agent_loc[:x], y - prev_agent_loc[:y]
 
-            offset = []
             if dx > 0  # Moving right
                 offset = [(0, 0), (1, 0), (2, 0), (1, 1), (2, 1), (2, 2), (1, -1), (2, -1), (2, -2)]
             elseif dx < 0  # Moving left
@@ -242,27 +243,32 @@ function render_state!(
                 offset = [(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2), (-1, 1), (-1, 2), (-2, 2)]
             elseif dy < 0  # Moving down
                 offset = [(0, 0), (0, -1), (0, -2), (1, -1), (1, -2), (2, -2), (-1, -1), (-1, -2), (-2, -2)]
+            else
+                offset = prev_offset
             end
 
             walls = state.val.walls
+
+            rect_shapes = []
 
             # Add highlighting to the visible area
             for (xx, yy) in offset
                 target_x, target_y = x + xx, y + yy
                 if is_valid_loc(target_x, target_y, width, height) && !is_path_blocked(x, y, target_x, target_y, walls)
-                    rect = Rect(target_x - 0.5, target_y - 0.5, 1, 1)
-                    poly!(ax, rect, color=RGBA(1.0, 0.0, 0.0, 0.1), strokewidth=0)
+                    push!(rect_shapes, RectShape(target_x, target_y, 1, 1; color=RGBA(1.0, 0.0, 0.0, 0.2), strokewidth=0))
+                else
+                    push!(rect_shapes, RectShape(x, y, 1, 1; color=RGBA(0.0, 0.0, 0.0, 0.0), strokewidth=0))
                 end
             end
+            # Update previous location and offset
+            prev_agent_loc[:x], prev_agent_loc[:y] = x, y
+            prev_offset = offset
 
-            if (x != prev_agent_loc[:x]) || (y != prev_agent_loc[:y])
-                prev_agent_loc[:x], prev_agent_loc[:y] = x, y
-            end
-
-            translate(renderer.agent_renderer(domain, $state), x, y)
+            MultiGraphic(Tuple(rect_shapes))
         end
+
         plt = graphicplot!(ax, graphic)
-        canvas.plots[:agent_graphic] = plt
+        canvas.plots[:agent_vision] = plt
     end
 
     # Return the canvas
