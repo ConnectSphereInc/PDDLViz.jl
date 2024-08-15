@@ -10,7 +10,7 @@ function render_state!(
         canvas.state = state
     end
     # Extract or construct main axis
-    ax = get(canvas.blocks, 1) do 
+    ax = get(canvas.blocks, 1) do
         _ax = Axis(canvas.layout[1,1], aspect=DataAspect(),
                    xzoomlock=true, xpanlock=true, xrectzoom=false,
                    yzoomlock=true, ypanlock=true, yrectzoom=false,
@@ -36,7 +36,7 @@ function render_state!(
     end
     # Set ticks to show grid
     map!(w -> (1:w-1) .+ 0.5, ax.xticks, width)
-    map!(h -> (1:h-1) .+ 0.5, ax.yticks, height) 
+    map!(h -> (1:h-1) .+ 0.5, ax.yticks, height)
     xlims!(ax, 0.5, width[] + 0.5)
     ylims!(ax, 0.5, height[] + 0.5)
     # Render locations
@@ -217,6 +217,50 @@ function render_state!(
         # Store observable for caption in canvas
         canvas.observables[:caption] = _ax.xlabel
     end
+
+    # Render agent vision
+    if renderer.has_agent && get(options, :show_agent, true)
+        # Initialize agent location and offset
+        prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
+        prev_offset = [(0, 0); fill((Inf, Inf), 8)]
+
+        graphic = @lift begin
+            x, y = gw_agent_loc(renderer, $state, $height)
+
+            # Set initial previous location
+            if isnothing(prev_agent_loc[:x]) || isnothing(prev_agent_loc[:y])
+                prev_agent_loc[:x], prev_agent_loc[:y] = x, y
+            end
+
+            # Determine movement direction and set vision offset
+            dx, dy = x - prev_agent_loc[:x], y - prev_agent_loc[:y]
+
+            offset = calculate_vision_offset(dx, dy, prev_offset)
+
+            walls = state.val.walls
+            rect_shapes = []
+
+            # Add highlighting to the visible area
+            for (xx, yy) in offset
+                target_x, target_y = x + xx, y + yy
+                if is_valid_loc(target_x, target_y, width, height) && !is_path_blocked(x, y, target_x, target_y, walls)
+                    push!(rect_shapes, RectShape(target_x, target_y, 1, 1; color=RGBA(1.0, 0.0, 0.0, 0.2), strokewidth=0))
+                else
+                    push!(rect_shapes, RectShape(x, y, 1, 1; color=RGBA(0.0, 0.0, 0.0, 0.0), strokewidth=0))
+                end
+            end
+
+            # Update previous location and offset
+            prev_agent_loc[:x], prev_agent_loc[:y] = x, y
+            prev_offset = offset
+
+            MultiGraphic(Tuple(rect_shapes))
+        end
+
+        plt = graphicplot!(ax, graphic)
+        canvas.plots[:agent_vision] = plt
+    end
+
     # Return the canvas
     return canvas
 end
