@@ -259,8 +259,8 @@ function render_state!(
 
         plt = graphicplot!(ax, graphic)
         canvas.plots[:agent_vision] = plt
-    elseif !isempty(PDDL.get_objects(domain, @state, :agent))
-        agents = Symbol[obj.name for obj in PDDL.get_objects(domain, @state, :agent)]
+    elseif !isempty(PDDL.get_objects(domain, state.val, :agent))
+        agents = Symbol[obj.name for obj in PDDL.get_objects(domain, state.val, :agent)]
         agent_graphics = []
         
         for agent in agents
@@ -268,7 +268,9 @@ function render_state!(
             prev_offset = [(0, 0); fill((Inf, Inf), 8)]
     
             graphic = @lift begin
-                x, y = gw_object_loc(renderer, @state, agent, @height)
+                current_state = $state
+                current_height = $height
+                x, y = gw_object_loc(renderer, current_state, agent, current_height)
     
                 # Set initial previous location
                 if isnothing(prev_agent_loc[:x]) || isnothing(prev_agent_loc[:y])
@@ -280,7 +282,7 @@ function render_state!(
     
                 offset = calculate_vision_offset(dx, dy, prev_offset)
     
-                walls = @state.walls
+                walls = current_state.walls
                 rect_shapes = []
     
                 # Add highlighting to the visible area
