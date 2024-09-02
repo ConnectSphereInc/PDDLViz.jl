@@ -260,7 +260,7 @@ function render_state!(
         plt = graphicplot!(ax, graphic)
         canvas.plots[:agent_vision] = plt
     elseif !isempty(PDDL.get_objects(domain, state, :agent))
-        agents = Symbol[obj.name for obj in PDDL.get_objects(domain, $state, :agent)]
+        agents = Symbol[obj.name for obj in PDDL.get_objects(domain, state, :agent)]
         for agent in agents
             prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
             prev_offset = [(0, 0); fill((Inf, Inf), 8)]
