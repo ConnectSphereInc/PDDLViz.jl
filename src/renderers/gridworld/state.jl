@@ -259,28 +259,30 @@ function render_state!(
 
         plt = graphicplot!(ax, graphic)
         canvas.plots[:agent_vision] = plt
-    elseif !isempty(PDDL.get_objects(domain, state, :agent))
-        agents = Symbol[obj.name for obj in PDDL.get_objects(domain, state, :agent)]
+    elseif !isempty(PDDL.get_objects(domain, @state, :agent))
+        agents = Symbol[obj.name for obj in PDDL.get_objects(domain, @state, :agent)]
+        agent_graphics = []
+        
         for agent in agents
             prev_agent_loc = Dict{Symbol, Union{Int, Nothing}}(:x => nothing, :y => nothing)
             prev_offset = [(0, 0); fill((Inf, Inf), 8)]
-
+    
             graphic = @lift begin
-                x, y = gw_object_loc(renderer, $state, agent, $height)
-
+                x, y = gw_object_loc(renderer, @state, agent, @height)
+    
                 # Set initial previous location
                 if isnothing(prev_agent_loc[:x]) || isnothing(prev_agent_loc[:y])
                     prev_agent_loc[:x], prev_agent_loc[:y] = x, y
                 end
-
+    
                 # Determine movement direction and set vision offset
                 dx, dy = x - prev_agent_loc[:x], y - prev_agent_loc[:y]
-
+    
                 offset = calculate_vision_offset(dx, dy, prev_offset)
-
-                walls = state.val.walls
+    
+                walls = @state.walls
                 rect_shapes = []
-
+    
                 # Add highlighting to the visible area
                 for (xx, yy) in offset
                     target_x, target_y = x + xx, y + yy
@@ -290,16 +292,24 @@ function render_state!(
                         push!(rect_shapes, RectShape(x, y, 1, 1; color=RGBA(0.0, 0.0, 0.0, 0.0), strokewidth=0))
                     end
                 end
-
+    
                 # Update previous location and offset
                 prev_agent_loc[:x], prev_agent_loc[:y] = x, y
                 prev_offset = offset
-
+    
                 MultiGraphic(Tuple(rect_shapes))
             end
+            
+            push!(agent_graphics, graphic)
         end
-
-        plt = graphicplot!(ax, graphic)
+    
+        # Combine all agent graphics into a single MultiGraphic
+        combined_graphic = @lift begin
+            graphics = map(g -> g[], agent_graphics)
+            MultiGraphic(Tuple(graphics))
+        end
+    
+        plt = graphicplot!(ax, combined_graphic)
         canvas.plots[:agent_vision] = plt
     end
 
